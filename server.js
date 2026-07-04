@@ -1,13 +1,13 @@
 const express = require('express');
 const app = express();
-const sqLite = require('sqlite3').verbose();
+const Database = require('better-sqlite3');
 
 app.use(express.json());
 
-const db = new sqLite.Database('./German.db');
+const db = new Database('./German.db');
 
-db.serialize(() => {
-    db.run(`
+try {
+    db.exec(`
         CREATE TABLE IF NOT EXISTS lessons (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             lesson_number INTEGER NOT NULL,
@@ -19,42 +19,42 @@ db.serialize(() => {
             date TEXT NOT NULL,
             completed_at DATETIME
         )
-    `, (err) => {
-        if (err) {
-            console.error('Error creating table:', err.message);
-        } else {
-            console.log('Database table ready');
-        }
-    });
-});
+    `);
+    console.log('Database table ready');
+} catch (err) {
+    console.error('Error creating table:', err.message);
+}
 
 app.get('/', (req, res) => {
     res.json({ message: 'Server is running' });
 });
 
+// Get all lessons
 app.get('/german/tasks', (req, res) => {
-    db.all('SELECT * FROM lessons', [], (err, rows) => {
-        if (err) {
-            res.status(500).json({ error: err.message });
-        } else {
-            res.json({ lessons: rows, count: rows.length });
-        }
-    });
+    try {
+        const rows = db.prepare('SELECT * FROM lessons').all();
+        res.json({ lessons: rows, count: rows.length });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
+// Add new lesson
 app.post('/german/tasks', (req, res) => {
-    const { lesson_number, section, type, description, mistakes, done, date, completed_at } = req.body;
-    db.run(`INSERT INTO lessons (lesson_number, section, type, description, mistakes, done, date, completed_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [lesson_number, section, type, description, mistakes, done, date, completed_at],
-        function(err) {
-            if (err) {
-                res.status(500).json({ error: err.message });
-            } else {
-                res.status(201).json({ id: this.lastID });
-            }
-        }
-    );
+    try {
+        const { lesson_number, section, type, description, mistakes, done, date, completed_at } = req.body;
+        
+        const stmt = db.prepare(`
+            INSERT INTO lessons (lesson_number, section, type, description, mistakes, done, date, completed_at) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        `);
+        
+        const result = stmt.run(lesson_number, section, type, description, mistakes, done, date, completed_at);
+        
+        res.status(201).json({ id: result.lastInsertRowid });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 app.listen(3000, () => {
