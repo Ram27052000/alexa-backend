@@ -55,7 +55,7 @@ app.post('/german/tasks', (req, res) => {
 });
 
 app.get('/suggest', (req, res) => {
-    const yesterday = new Date(Date.now()-86400).toISOString().split('T')[0];
+    const yesterday = new Date(Date.now()-86400000).toISOString().split('T')[0];
     const missed = db.prepare(
         `SELECT * FROM lessons where date =? And done = 0`
     ).all(yesterday);
@@ -63,9 +63,6 @@ app.get('/suggest', (req, res) => {
     let suggestion = ' ';
     if(missed.length > 0) {
         suggestion = `You missed ${missed[0].type} in lesson ${missed[0].lesson_number} yesterday. Do that first.`;
-    }
-    else if(missed.length > 0) {
-        suggestion = `Revise lesson ${mistakes[0].lesson_number} — you made mistakes in ${mistakes[0].mistakes}.`;
     }
     else{
         suggestion = `All caught up! Start a new lesson today.`;
