@@ -38,24 +38,40 @@ app.get('/german/tasks', (req, res) => {
         res.status(500).json({ error: err.message });
     }
 });
-
-// Add new lesson
 app.post('/german/tasks', (req, res) => {
     try {
         const { lesson_number, section, type, description, mistakes, done, date, completed_at } = req.body;
-        
+
         const stmt = db.prepare(`
             INSERT INTO lessons (lesson_number, section, type, description, mistakes, done, date, completed_at) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         `);
-        
+
         const result = stmt.run(lesson_number, section, type, description, mistakes, done, date, completed_at);
-        
         res.status(201).json({ id: result.lastInsertRowid });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
+
+app.get('/suggest', (req, res) => {
+    const yesterday = new Date(Date.now()-86400).toISOString().split('T')[0];
+    const missed = db.prepare(
+        `SELECT * FROM lessons where date =? And done = 0`
+    ).all(yesterday);
+
+    let suggestion = ' ';
+    if(missed.length > 0) {
+        suggestion = `You missed ${missed[0].type} in lesson ${missed[0].lesson_number} yesterday. Do that first.`;
+    }
+    else if(missed.length > 0) {
+        suggestion = `Revise lesson ${mistakes[0].lesson_number} — you made mistakes in ${mistakes[0].mistakes}.`;
+    }
+    else{
+        suggestion = `All caught up! Start a new lesson today.`;
+    }
+    res.json({ suggestion });
+})
 
 app.listen(3000, () => {
     console.log('Server is running on port 3000');
