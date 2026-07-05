@@ -73,6 +73,14 @@ app.get('/suggest', (req, res) => {
     res.json({ suggestion });
 })
 
+app.patch('/german/tasks/:id', (req, res) => {
+    const { done } = req.body;
+    db.prepare(
+        `UPDATE lessons SET done = ?, completed_at = ? WHERE id = ?`
+    ).run(done ? 1 : 0, new Date().toISOString(), req.params.id);
+    res.json({ message: 'Task updated!' });
+});
+
 app.listen(3000, () => {
     console.log('Server is running on port 3000');
 });
